@@ -1,0 +1,28 @@
+{
+  "juego": {
+    "estrellas_para_salir": 5,
+    "segundos_para_responder": 45,
+    "segundos_de_microfono": 20,
+    "edades": "9 a 11 años",
+    "tema": "vocabulario cotidiano en ingles: colores, animales, comida, la casa, el clima, la familia, la ropa y los numeros"
+  },
+  "voz": {
+    "instruct": "female, young adult, american accent",
+    "num_step": 16,
+    "bitrate_opus": "32k"
+  },
+  "oido": {
+    "modelo": "openai/whisper-large-v3-turbo",
+    "parecido_minimo": 0.85
+  },
+  "gemini": {
+    "model": "gemini-3.6-flash",
+    "thinking_level": "low",
+    "api_retries": 4,
+    "retry_wait": 20
+  },
+  "servidor": {
+    "puerto": 8000,
+    "clave_profe": "loro2026"
+  }
+}

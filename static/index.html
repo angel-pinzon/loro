@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loro</title>
+<style>
+  :root{
+    --selva:#0b3d2e; --selva2:#124f3b; --hoja:#2fbf71; --sol:#ffd23f;
+    --papel:#f7f4e9; --coral:#ff6b5a; --tinta:#10251d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Trebuchet MS",system-ui,sans-serif;background:var(--selva);color:var(--papel)}
+  #entrada{position:fixed;inset:0;background:var(--selva);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:18px;z-index:50}
+  #entrada h1{font-size:3rem;margin:0;color:var(--sol)}
+  input,button{font-family:inherit;font-size:1.1rem;border-radius:14px;border:0;padding:14px 18px}
+  input{width:280px;text-align:center}
+  button{background:var(--hoja);color:var(--tinta);font-weight:bold;cursor:pointer}
+  button:hover{filter:brightness(1.1)} button:disabled{opacity:.45;cursor:not-allowed}
+  #juego{display:none;grid-template-columns:290px 1fr;gap:16px;padding:16px;height:100vh}
+  .caja{background:var(--selva2);border-radius:20px;padding:16px;overflow:auto}
+  h2{margin:0 0 12px;font-size:1.1rem;color:var(--sol);letter-spacing:.5px}
+  .jug{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;margin-bottom:6px;
+    background:rgba(0,0,0,.18);transition:background .3s}
+  .jug.elegido{background:var(--sol);color:var(--tinta);font-weight:bold}
+  .jug.fuera{opacity:.55}
+  .jug .nom{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .estrellas{letter-spacing:2px}
+  .punto{width:9px;height:9px;border-radius:50%;background:#5a6}
+  .punto.off{background:#744}
+  .escena{display:flex;flex-direction:column;align-items:center;gap:14px}
+  #loro{width:230px;height:230px;flex:none}
+  #pregunta{font-size:1.6rem;text-align:center;min-height:2.4em;max-width:760px;line-height:1.35}
+  #estado{color:var(--sol);font-size:.95rem;min-height:1.2em}
+  #zona{width:100%;max-width:560px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  #zona input{width:100%}
+  .fila{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  #revelacion{width:100%;max-width:760px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .tarjeta{background:rgba(0,0,0,.25);border-radius:12px;padding:8px 12px;font-size:.95rem}
+  .tarjeta.bien{background:rgba(47,191,113,.35)} .tarjeta.mal{background:rgba(255,107,90,.25)}
+  #ruleta{font-size:2.6rem;font-weight:bold;color:var(--sol);min-height:1.2em}
+  #profe{display:none;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  #profe button{background:var(--coral);color:#fff;padding:10px 14px;font-size:.95rem}
+  .grabando{animation:latir 1s infinite} @keyframes latir{50%{filter:brightness(1.6)}}
+  #subtitulo{font-size:1.05rem;opacity:.85;text-align:center;min-height:1.3em;max-width:700px}
+</style>
+</head>
+<body>
+
+<div id="entrada">
+  <h1>🦜 Loro</h1>
+  <div id="rolProfe" style="color:#ffd23f;font-weight:bold"></div>
+  <p>Escribe tu nombre para entrar al juego</p>
+  <input id="nombre" placeholder="Tu nombre" maxlength="20" autocomplete="off">
+  <button id="btEntrar">Entrar</button>
+  <small id="avisoMic" style="opacity:.7"></small>
+</div>
+
+<div id="juego">
+  <div class="caja">
+    <div id="cabecera" style="font-size:.85rem;opacity:.8;margin-bottom:12px"></div>
+    <h2>PARTICIPANTES</h2>
+    <div id="lista"></div>
+  </div>
+  <div class="caja escena">
+    <svg id="loro" viewBox="0 0 200 200">
+      <ellipse cx="100" cy="130" rx="52" ry="55" fill="#2fbf71"/>
+      <ellipse cx="72" cy="135" rx="22" ry="38" fill="#28a862"/>
+      <path d="M148 150 q30 25 18 42 q-22 -6 -30 -30 z" fill="#1f8f52"/>
+      <circle cx="100" cy="72" r="42" fill="#37d17f"/>
+      <path d="M62 44 q18 -30 46 -22 q-24 4 -34 26 z" fill="#ffd23f"/>
+      <circle cx="88" cy="66" r="11" fill="#fff"/>
+      <circle id="pupila" cx="90" cy="67" r="6" fill="#10251d"/>
+      <path d="M126 66 q26 6 24 20 q-14 4 -26 -6 z" fill="#ffd23f"/>
+      <g id="picoAbajo" style="transform-origin:128px 84px">
+        <path d="M126 82 q22 4 20 14 q-14 6 -24 -4 z" fill="#f0a92b"/>
+      </g>
+      <ellipse cx="100" cy="176" rx="26" ry="7" fill="#0b3d2e" opacity=".5"/>
+    </svg>
+
+    <div id="ruleta"></div>
+    <div id="pregunta">Esperando a que empiece el juego...</div>
+    <div id="subtitulo"></div>
+    <div id="estado"></div>
+    <button id="desbloqueo" style="display:none;background:#ff6b5a;color:#fff">🔊 Activar sonido</button>
+
+    <div id="zona"></div>
+    <div id="revelacion"></div>
+    <div id="profe" class="fila"></div>
+  </div>
+</div>
+
+<audio id="altavoz"></audio>
+
+<script>
+const $ = s => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const clave = params.get("profe");
+addEventListener("DOMContentLoaded", () => { if (clave) document.querySelector("#rolProfe").textContent = "Modo profesor"; });
+let ws, yo = "", ultimo = {}, pendiente = null, ctxAudio, analizador, grabadora, trozos = [], regrabadas = 0, blobActual = null;
+
+/* ---------- audio: una cola, y el pico se mueve con el volumen ---------- */
+const altavoz = $("#altavoz"), cola = [];
+let sonando = false;
+
+async function preparaAnalizador(){
+  if (!ctxAudio) {
+    try {
+      ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+      const fuente = ctxAudio.createMediaElementSource(altavoz);
+      analizador = ctxAudio.createAnalyser();
+      analizador.fftSize = 512;
+      fuente.connect(analizador); analizador.connect(ctxAudio.destination);
+    } catch (e) {
+      ctxAudio = null; analizador = null;   // sin Web Audio el loro habla igual
+    }
+    animaPico();
+  }
+  // Crear el contexto no basta: nace suspendido y hay que reanudarlo dentro
+  // del gesto del usuario, o todo el audio se reproduce en silencio.
+  if (ctxAudio && ctxAudio.state !== "running") { try { await ctxAudio.resume(); } catch (e) {} }
+}
+
+function animaPico(){
+  const pico = $("#picoAbajo");
+  const datos = analizador ? new Uint8Array(analizador.frequencyBinCount) : null;
+  (function marco(){
+    let fuerza = 0;
+    if (sonando) {
+      if (analizador) {
+        analizador.getByteTimeDomainData(datos);
+        let suma = 0;
+        for (const v of datos) suma += (v - 128) ** 2;
+        fuerza = Math.min(1, Math.sqrt(suma / datos.length) / 26);
+      } else {
+        fuerza = 0.35 + 0.35 * Math.abs(Math.sin(Date.now() / 90));
+      }
+    }
+    pico.style.transform = `rotate(${fuerza * 26}deg)`;
+    requestAnimationFrame(marco);
+  })();
+}
+
+function reproduce(url){ cola.push(url); if (!sonando) siguienteAudio(); }
+function siguienteAudio(){
+  const url = cola.shift();
+  if (!url){ sonando = false; return; }
+  sonando = true; altavoz.src = url;
+  if (ctxAudio && ctxAudio.state !== "running") ctxAudio.resume().catch(() => {});
+  altavoz.play().then(() => {
+    $("#desbloqueo").style.display = "none";
+  }).catch(() => {
+    // El navegador nos ha silenciado: que el niño pueda desbloquearlo a mano.
+    sonando = false;
+    pendiente = url;
+    $("#desbloqueo").style.display = "inline-block";
+  });
+}
+
+$("#desbloqueo").onclick = async () => {
+  await preparaAnalizador();
+  $("#desbloqueo").style.display = "none";
+  if (pendiente) { const u = pendiente; pendiente = null; reproduce(u); }
+};
+altavoz.onended = altavoz.onerror = siguienteAudio;
+
+/* ---------- conexion ---------- */
+function conecta(){
+  ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+  ws.onopen = () => ws.send(JSON.stringify({tipo: "entrar", nombre: yo, observador: !!clave}));
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.tipo === "estado") pinta(m);
+    else if (m.tipo === "habla"){
+      reproduce(m.url);
+      if (m.subtitular === false) $("#subtitulo").textContent = "";
+      else $("#subtitulo").textContent = m.quien === "loro" ? m.texto : `${m.quien}: “${m.texto}”`;
+    }
+    else if (m.tipo === "error") $("#estado").textContent = "Error: " + m.detalle;
+  };
+  ws.onclose = () => { $("#estado").textContent = "Se perdio la conexion, reintentando..."; setTimeout(conecta, 1500); };
+}
+
+/* ---------- pintar ---------- */
+function pinta(m){
+  ultimo = m;
+  $("#lista").innerHTML = m.jugadores.map(j => `
+    <div class="jug ${j.nombre === m.elegido ? "elegido" : ""} ${j.activo ? "" : "fuera"}">
+      <div class="punto ${j.conectado ? "" : "off"}"></div>
+      <div class="nom">${escapa(j.nombre)}</div>
+      <div class="estrellas">${"★".repeat(j.estrellas)}${"☆".repeat(Math.max(0, m.estrellas_para_salir - j.estrellas))}</div>
+      ${m.fase === "pregunta" && j.respondio ? "✍️" : ""}
+    </div>`).join("");
+
+  $("#cabecera").innerHTML = m.tema
+    ? `<b style="color:#ffd23f">Tema:</b> ${escapa(m.tema)}<br><b style="color:#ffd23f">Edades:</b> ${escapa(m.edades || "")}` : "";
+  $("#pregunta").textContent = m.pregunta || (m.fase === "lobby" ? "Esperando a que empiece el juego..." : "");
+  $("#ruleta").textContent = m.fase === "ruleta" || m.fase === "micro" ? "🎯 " + (m.elegido || "") : "";
+
+  const textos = {
+    lobby: "Esperando al profe...", pregunta: "Escribe tu respuesta. Nadie ve la de nadie.",
+    ruleta: "¡Girando la ruleta!", micro: m.elegido === yo ? "¡TE TOCA! Responde en voz alta." : `Le toca a ${m.elegido}`,
+    revelacion: "", final: "🎉 ¡Se acabo el juego!", error: "Algo fallo, mira la consola del servidor.",
+  };
+  $("#estado").textContent = textos[m.fase] || "";
+
+  $("#revelacion").innerHTML = m.fase === "revelacion" && m.revelacion
+    ? m.revelacion.map(r => `<div class="tarjeta ${r.correcto ? "bien" : "mal"}">${escapa(r.nombre)}: ${escapa(r.texto)}</div>`).join("")
+    : "";
+
+  pintaZona(m);
+  if (clave) pintaProfe(m);
+}
+
+function escapa(s){ const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+
+function pintaZona(m){
+  const zona = $("#zona"), mio = m.jugadores.find(j => j.nombre === yo);
+
+  if (m.fase === "pregunta" && mio && mio.activo && !mio.respondio){
+    if (zona.dataset.modo === "escribir") return;
+    zona.dataset.modo = "escribir";
+    zona.innerHTML = `<input id="resp" placeholder="Answer in a full sentence..." autocomplete="off">
+                      <button id="btResp">Enviar respuesta</button>`;
+    $("#resp").focus();
+    const enviar = () => {
+      const t = $("#resp").value.trim();
+      if (t) ws.send(JSON.stringify({tipo: "respuesta", texto: t}));
+    };
+    $("#btResp").onclick = enviar;
+    $("#resp").onkeydown = e => { if (e.key === "Enter") enviar(); };
+    return;
+  }
+
+  if (m.fase === "micro" && m.elegido === yo){
+    if (zona.dataset.modo === "micro") return;
+    zona.dataset.modo = "micro"; regrabadas = 0; blobActual = null;
+    zona.innerHTML = `<button id="btGrabar">🎤 Grabar mi respuesta</button><div id="repaso"></div>`;
+    $("#btGrabar").onclick = alternaGrabacion;
+    return;
+  }
+
+  if (zona.dataset.modo !== "vacio"){ zona.dataset.modo = "vacio"; zona.innerHTML = ""; }
+}
+
+/* ---------- microfono ---------- */
+async function alternaGrabacion(){
+  const boton = $("#btGrabar");
+  if (grabadora && grabadora.state === "recording"){ grabadora.stop(); return; }
+
+  const flujo = await navigator.mediaDevices.getUserMedia({audio: true});
+  trozos = [];
+  grabadora = new MediaRecorder(flujo);
+  grabadora.ondataavailable = e => trozos.push(e.data);
+  grabadora.onstop = () => {
+    flujo.getTracks().forEach(t => t.stop());
+    blobActual = new Blob(trozos, {type: "audio/webm"});
+    boton.textContent = "🎤 Grabar mi respuesta"; boton.classList.remove("grabando");
+    $("#repaso").innerHTML = `<audio controls src="${URL.createObjectURL(blobActual)}"></audio>
+      <div class="fila" style="margin-top:8px">
+        <button id="btEnviar">Enviar a la clase</button>
+        ${regrabadas < 1 ? '<button id="btOtra">Regrabar (una vez)</button>' : ""}
+      </div>`;
+    $("#btEnviar").onclick = enviaMicro;
+    if ($("#btOtra")) $("#btOtra").onclick = () => { regrabadas++; $("#repaso").innerHTML = ""; alternaGrabacion(); };
+  };
+  grabadora.start();
+  boton.textContent = "⏹ Parar"; boton.classList.add("grabando");
+}
+
+async function enviaMicro(){
+  if (!blobActual) return;
+  $("#repaso").innerHTML = "Enviando...";
+  const cuerpo = new FormData();
+  cuerpo.append("nombre", yo);
+  cuerpo.append("audio", blobActual, "micro.webm");
+  await fetch("/micro", {method: "POST", body: cuerpo});
+  $("#repaso").innerHTML = "¡Enviado!";
+}
+
+/* ---------- panel del profe ---------- */
+function pintaProfe(m){
+  const p = $("#profe"); p.style.display = "flex";
+  // El formulario solo se redibuja si no lo esta editando: si no, borraria
+  // lo que el profe esta escribiendo cada vez que llega un estado nuevo.
+  const editando = document.activeElement && document.activeElement.id === "tema";
+  if (!editando) {
+    p.innerHTML = `
+      <div style="width:100%;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center">
+        <input id="tema" style="flex:1;min-width:260px;font-size:.95rem;padding:10px"
+               placeholder="Tema de la clase" value="${escapa(m.tema || "")}">
+        <input id="edades" style="width:150px;font-size:.95rem;padding:10px"
+               placeholder="Edades" value="${escapa(m.edades || "")}">
+        <button data-a="configurar">💾 Fijar tema</button>
+      </div>
+      <button data-a="empezar">▶ Empezar</button>
+      <button data-a="siguiente">⏭ Siguiente</button>
+      ${m.elegido ? `<button data-a="estrella" data-n="${escapa(m.elegido)}">⭐ Dar estrella a ${escapa(m.elegido)}</button>` : ""}`;
+    p.querySelectorAll("button").forEach(b => b.onclick = () =>
+      ws.send(JSON.stringify({tipo: "profe", clave, accion: b.dataset.a, nombre: b.dataset.n, cuanto: 1,
+                              tema: $("#tema") ? $("#tema").value : null,
+                              edades: $("#edades") ? $("#edades").value : null})));
+  }
+}
+
+/* ---------- entrar ---------- */
+$("#btEntrar").onclick = async () => {
+  const n = $("#nombre").value.trim();
+  if (!n) return;
+  yo = n;
+  await preparaAnalizador();           // el clic autoriza el audio del navegador
+  if (!clave) {
+    try { (await navigator.mediaDevices.getUserMedia({audio: true})).getTracks().forEach(t => t.stop()); }
+    catch (e) { $("#avisoMic").textContent = "Sin microfono podras escribir, pero no hablar."; }
+  }
+  $("#entrada").style.display = "none";
+  $("#juego").style.display = "grid";
+  conecta();
+};
+$("#nombre").onkeydown = e => { if (e.key === "Enter") $("#btEntrar").click(); };
+</script>
+</body>
+</html>
